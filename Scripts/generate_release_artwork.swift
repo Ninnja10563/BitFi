@@ -41,7 +41,7 @@ func makeIcon() -> NSImage {
     defer { image.unlockFocus() }
 
     let canvas = NSRect(x: 0, y: 0, width: 1024, height: 1024)
-    NSColor(calibratedRed: 0.10, green: 0.56, blue: 0.30, alpha: 1).setFill()
+    NSColor(calibratedWhite: 0.045, alpha: 1).setFill()
     NSBezierPath(roundedRect: canvas.insetBy(dx: 42, dy: 42), xRadius: 225, yRadius: 225).fill()
 
     let body = NSRect(x: 188, y: 348, width: 572, height: 328)
