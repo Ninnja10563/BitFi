@@ -53,16 +53,10 @@ func makeIcon() -> NSImage {
     NSColor.white.withAlphaComponent(0.93).setFill()
     NSBezierPath(roundedRect: terminal, xRadius: 18, yRadius: 18).fill()
 
-    let bolt = NSBezierPath()
-    bolt.move(to: NSPoint(x: 530, y: 642))
-    bolt.line(to: NSPoint(x: 411, y: 498))
-    bolt.line(to: NSPoint(x: 490, y: 498))
-    bolt.line(to: NSPoint(x: 457, y: 376))
-    bolt.line(to: NSPoint(x: 604, y: 542))
-    bolt.line(to: NSPoint(x: 520, y: 542))
-    bolt.close()
-    NSColor.white.setFill()
-    bolt.fill()
+    // Fixed 75% level: visual identity, not a live battery reading.
+    let charge = NSRect(x: 226, y: 386, width: 372, height: 252)
+    NSColor.white.withAlphaComponent(0.93).setFill()
+    NSBezierPath(roundedRect: charge, xRadius: 28, yRadius: 28).fill()
 
     return image
 }

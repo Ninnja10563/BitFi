@@ -63,7 +63,7 @@ BitFi/
 Release DMG build:
 
 ```sh
-Scripts/build_release_dmg.sh 1.2.4
+Scripts/build_release_dmg.sh 1.2.5
 ```
 
-Creates `Artifacts/BitFi-1.2.4-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, flat black BitFi battery-and-bolt icon, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.
+Creates `Artifacts/BitFi-1.2.5-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, flat black BitFi battery icon at 75% charge, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.
