@@ -7,12 +7,11 @@ import MachO
 
 /// Reads public IOKit power-source data. No private IORegistry keys or charger controls.
 @MainActor
-final class BatteryMonitor: ObservableObject {
+final class BatteryMonitor: NSObject, ObservableObject {
     @Published private(set) var snapshot = BatterySnapshot.unavailable
 
     private var powerSourceRunLoopSource: CFRunLoopSource?
     private var fallbackTimer: Timer?
-    private var wakeObserver: NSObjectProtocol?
     private var hasStarted = false
 
     func start() {
@@ -26,17 +25,20 @@ final class BatteryMonitor: ObservableObject {
             CFRunLoopAddSource(CFRunLoopGetMain(), powerSourceRunLoopSource, .defaultMode)
         }
 
-        fallbackTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
-        }
+        fallbackTimer = Timer.scheduledTimer(
+            timeInterval: 60,
+            target: self,
+            selector: #selector(refreshFromTimer),
+            userInfo: nil,
+            repeats: true
+        )
 
-        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.refresh() }
-        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(refreshFromWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
     }
 
     func refresh() {
@@ -77,11 +79,16 @@ final class BatteryMonitor: ObservableObject {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), powerSourceRunLoopSource, .defaultMode)
         }
         powerSourceRunLoopSource = nil
-        if let wakeObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
-        }
-        wakeObserver = nil
+        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.didWakeNotification, object: nil)
         hasStarted = false
+    }
+
+    @objc private func refreshFromTimer() {
+        refresh()
+    }
+
+    @objc private func refreshFromWake() {
+        refresh()
     }
 
     private static let powerSourceChanged: IOPowerSourceCallbackType = { context in
