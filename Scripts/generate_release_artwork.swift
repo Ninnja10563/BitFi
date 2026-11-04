@@ -41,34 +41,25 @@ func makeIcon() -> NSImage {
     defer { image.unlockFocus() }
 
     let canvas = NSRect(x: 0, y: 0, width: 1024, height: 1024)
-    NSColor(calibratedRed: 0.075, green: 0.082, blue: 0.102, alpha: 1).setFill()
+    NSColor(calibratedRed: 0.10, green: 0.56, blue: 0.30, alpha: 1).setFill()
     NSBezierPath(roundedRect: canvas.insetBy(dx: 42, dy: 42), xRadius: 225, yRadius: 225).fill()
 
-    let highlight = NSBezierPath(roundedRect: NSRect(x: 88, y: 548, width: 848, height: 350), xRadius: 170, yRadius: 170)
-    NSColor(calibratedRed: 0.16, green: 0.31, blue: 0.63, alpha: 0.23).setFill()
-    highlight.fill()
-
-    let body = NSRect(x: 192, y: 338, width: 572, height: 348)
-    let terminal = NSRect(x: 764, y: 448, width: 72, height: 128)
-    NSColor.white.withAlphaComponent(0.93).setStroke()
-    NSBezierPath(roundedRect: body, xRadius: 54, yRadius: 54).lineWidth = 30
+    let body = NSRect(x: 188, y: 348, width: 572, height: 328)
+    let terminal = NSRect(x: 760, y: 448, width: 74, height: 128)
     let bodyPath = NSBezierPath(roundedRect: body, xRadius: 54, yRadius: 54)
-    bodyPath.lineWidth = 30
+    bodyPath.lineWidth = 32
+    NSColor.white.withAlphaComponent(0.96).setStroke()
     bodyPath.stroke()
     NSColor.white.withAlphaComponent(0.93).setFill()
     NSBezierPath(roundedRect: terminal, xRadius: 18, yRadius: 18).fill()
 
-    let charge = NSRect(x: 240, y: 386, width: 370, height: 252)
-    NSColor(calibratedRed: 0.22, green: 0.53, blue: 1.0, alpha: 1).setFill()
-    NSBezierPath(roundedRect: charge, xRadius: 30, yRadius: 30).fill()
-
     let bolt = NSBezierPath()
-    bolt.move(to: NSPoint(x: 534, y: 650))
-    bolt.line(to: NSPoint(x: 415, y: 500))
-    bolt.line(to: NSPoint(x: 493, y: 500))
-    bolt.line(to: NSPoint(x: 460, y: 370))
-    bolt.line(to: NSPoint(x: 606, y: 542))
-    bolt.line(to: NSPoint(x: 523, y: 542))
+    bolt.move(to: NSPoint(x: 530, y: 642))
+    bolt.line(to: NSPoint(x: 411, y: 498))
+    bolt.line(to: NSPoint(x: 490, y: 498))
+    bolt.line(to: NSPoint(x: 457, y: 376))
+    bolt.line(to: NSPoint(x: 604, y: 542))
+    bolt.line(to: NSPoint(x: 520, y: 542))
     bolt.close()
     NSColor.white.setFill()
     bolt.fill()
