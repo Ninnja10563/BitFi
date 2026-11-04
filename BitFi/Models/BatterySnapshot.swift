@@ -32,15 +32,6 @@ enum PowerSourceKind: Equatable {
         }
     }
 
-    var symbolName: String {
-        switch self {
-        case .acPower: "powerplug"
-        case .battery: "battery.50"
-        case .ups: "bolt.horizontal.circle"
-        case .unavailable: "battery.0"
-        case .other: "bolt.circle"
-        }
-    }
 }
 
 struct BatterySnapshot: Equatable {
@@ -93,6 +84,12 @@ struct BatterySnapshot: Equatable {
         percentage.map { "\($0)%" } ?? "—"
     }
 
+    /// Native variable SF Symbols accept a normalized fill level.
+    var batteryLevelFraction: Double? {
+        guard let percentage else { return nil }
+        return min(max(Double(percentage) / 100, 0), 1)
+    }
+
     var isConnectedToPower: Bool {
         powerSource == .acPower
     }
@@ -108,24 +105,12 @@ struct BatterySnapshot: Equatable {
     var statusSymbolName: String {
         if isCharging { return "bolt.fill" }
         if isCharged { return "checkmark.circle.fill" }
-        return powerSource.symbolName
-    }
-
-    /// Closest native SF Symbol level for current live IOKit capacity.
-    var batterySymbolName: String {
-        guard let percentage else { return "battery.0" }
-
-        switch percentage {
-        case ...10:
-            return "battery.0"
-        case 11...35:
-            return "battery.25"
-        case 36...60:
-            return "battery.50"
-        case 61...85:
-            return "battery.75"
-        default:
-            return "battery.100"
+        switch powerSource {
+        case .acPower: return "powerplug"
+        case .battery: return "bolt.slash"
+        case .ups: return "bolt.horizontal.circle"
+        case .unavailable: return "questionmark.circle"
+        case .other: return "bolt.circle"
         }
     }
 

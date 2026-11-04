@@ -72,5 +72,6 @@ hdiutil detach "$DEVICE" -quiet
 DEVICE=""
 
 OUTPUT_BASE="${OUTPUT_PATH%.dmg}"
+rm -f "$OUTPUT_PATH"
 hdiutil convert "$RAW_DMG" -format UDZO -imagekey zlib-level=9 -o "$OUTPUT_BASE" >/dev/null
 print "Created ${OUTPUT_BASE}.dmg"

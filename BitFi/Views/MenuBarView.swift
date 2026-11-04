@@ -28,6 +28,7 @@ struct MenuBarView: View {
 
     @State private var selectedPanel: MenuBarPanel = .status
     @State private var selectedAppMode: AppActivityChartMode = .cpu
+    @State private var systemAppMessage: String?
 
     private var chargeLimitBinding: Binding<Double> {
         Binding(
@@ -97,10 +98,12 @@ struct MenuBarView: View {
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 7) {
-                    Image(systemName: monitor.snapshot.batterySymbolName)
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.tint)
-                        .accessibilityHidden(true)
+                    BatteryLevelSymbol(
+                        snapshot: monitor.snapshot,
+                        tint: .accentColor,
+                        width: 25,
+                        height: 15
+                    )
                     Text("Battery")
                         .font(.headline)
                 }
@@ -248,6 +251,15 @@ struct MenuBarView: View {
                     .font(.headline)
                 Spacer()
                 Button {
+                    systemAppMessage = SystemAppLauncher.openActivityMonitor()
+                        ? nil
+                        : "Activity Monitor is unavailable."
+                } label: {
+                    Image(systemName: "arrow.up.right.square")
+                }
+                .buttonStyle(.borderless)
+                .help("Open Activity Monitor for actual per-process Energy Impact")
+                Button {
                     monitor.refresh()
                     activityMonitor.refresh()
                 } label: {
@@ -267,6 +279,16 @@ struct MenuBarView: View {
 
             if selectedAppMode.measure != nil {
                 Label("Live · 2 sec", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let systemAppMessage {
+                Text(systemAppMessage)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            } else if selectedAppMode.measure != nil {
+                Text("Actual per-process Energy Impact is available in Activity Monitor.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -303,7 +325,7 @@ struct MenuBarView: View {
                 }
                 Spacer(minLength: 0)
             }
-            Text("Actual device charge. Per-app battery energy is not public macOS data.")
+            Text("Actual device charge. Open Activity Monitor for per-process Energy Impact.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

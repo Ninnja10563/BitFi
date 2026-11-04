@@ -5,6 +5,7 @@ struct AppActivityView: View {
     @EnvironmentObject private var monitor: BatteryMonitor
     @EnvironmentObject private var activityMonitor: AppActivityMonitor
     @State private var selectedMode: AppActivityChartMode = .cpu
+    @State private var systemAppMessage: String?
 
     var body: some View {
         ScrollView {
@@ -17,6 +18,14 @@ struct AppActivityView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
+                    Button {
+                        systemAppMessage = SystemAppLauncher.openActivityMonitor()
+                            ? nil
+                            : "Activity Monitor is unavailable."
+                    } label: {
+                        Label("Activity Monitor", systemImage: "arrow.up.right.square")
+                    }
+                    .help("Open Activity Monitor for actual per-process Energy Impact")
                     Button {
                         monitor.refresh()
                         activityMonitor.refresh()
@@ -36,6 +45,12 @@ struct AppActivityView: View {
                 Label(liveUpdateText, systemImage: "dot.radiowaves.left.and.right")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if let systemAppMessage {
+                    Label(systemAppMessage, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
 
                 chartContent
 
@@ -145,11 +160,11 @@ struct AppActivityView: View {
     private var chartNote: String {
         switch selectedMode {
         case .cpu:
-            "CPU values come from macOS process reporting, grouped by visible app bundle. They are workload signals, not battery-energy measurements."
+            "CPU values come from macOS process reporting, grouped by visible app bundle. They are workload signals, not battery-energy measurements. Open Activity Monitor for actual per-process Energy Impact."
         case .memory:
-            "Memory values are current resident memory from macOS process reporting, grouped by visible app bundle."
+            "Memory values are current resident memory from macOS process reporting, grouped by visible app bundle. Open Activity Monitor for actual per-process Energy Impact."
         case .energyLevel:
-            "Energy Level shows actual battery state of charge reported by macOS. macOS does not expose a public per-app battery-energy API."
+            "Battery Level shows actual state of charge reported by macOS. macOS does not expose per-process Energy Impact to public apps; Activity Monitor does."
         }
     }
 

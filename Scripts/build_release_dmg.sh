@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 
-VERSION="${1:-1.1.1}"
+VERSION="${1:-1.1.2}"
 ROOT_DIRECTORY="$(cd "$(dirname "$0")/.." && pwd)"
 ARTIFACT_DIRECTORY="$ROOT_DIRECTORY/Artifacts"
 APP_DIRECTORY="$ARTIFACT_DIRECTORY/BitFi.app"

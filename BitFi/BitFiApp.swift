@@ -53,9 +53,7 @@ struct BitFiApp: App {
                 .environmentObject(activityMonitor)
         } label: {
             HStack(spacing: 3) {
-                Image(systemName: monitor.snapshot.batterySymbolName)
-                    .font(.system(size: 15, weight: .medium))
-                    .imageScale(.medium)
+                BatteryLevelSymbol(snapshot: monitor.snapshot, width: 22, height: 13)
                 if monitor.snapshot.isCharging {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 9, weight: .bold))

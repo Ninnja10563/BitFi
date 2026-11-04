@@ -1,21 +1,75 @@
 import AppKit
 import SwiftUI
 
+struct BatteryLevelSymbol: View {
+    let snapshot: BatterySnapshot
+    var tint: Color = .primary
+    var width: CGFloat = 24
+    var height: CGFloat = 14
+
+    var body: some View {
+        Canvas { context, size in
+            let lineWidth = max(1, min(size.width, size.height) * 0.1)
+            let terminalWidth = max(2, size.width * 0.1)
+            let bodyRect = CGRect(
+                x: lineWidth / 2,
+                y: lineWidth / 2,
+                width: max(1, size.width - terminalWidth - lineWidth * 1.8),
+                height: max(1, size.height - lineWidth)
+            )
+            let cornerRadius = min(bodyRect.height * 0.23, 3)
+            let bodyPath = Path(roundedRect: bodyRect, cornerRadius: cornerRadius)
+            context.stroke(bodyPath, with: .color(tint), lineWidth: lineWidth)
+
+            let terminalRect = CGRect(
+                x: bodyRect.maxX + lineWidth * 0.45,
+                y: bodyRect.midY - bodyRect.height * 0.18,
+                width: terminalWidth,
+                height: bodyRect.height * 0.36
+            )
+            context.fill(Path(roundedRect: terminalRect, cornerRadius: 1), with: .color(tint))
+
+            let innerRect = bodyRect.insetBy(dx: lineWidth * 1.2, dy: lineWidth * 1.2)
+            let fraction = CGFloat(snapshot.batteryLevelFraction ?? 0)
+            let fillWidth = innerRect.width * fraction
+            guard fillWidth > 0 else { return }
+
+            let fillRect = CGRect(
+                x: innerRect.minX,
+                y: innerRect.minY,
+                width: max(min(fillWidth, innerRect.width), lineWidth * 0.75),
+                height: innerRect.height
+            )
+            context.fill(
+                Path(roundedRect: fillRect, cornerRadius: min(fillRect.height * 0.2, 2)),
+                with: .color(tint)
+            )
+        }
+        .frame(width: width, height: height)
+        .accessibilityHidden(true)
+    }
+}
+
 struct BatteryHeader: View {
     let snapshot: BatterySnapshot
 
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
-            Image(systemName: snapshot.batterySymbolName)
-                .font(.system(size: 24, weight: .medium))
+            BatteryLevelSymbol(
+                snapshot: snapshot,
+                tint: snapshot.isCharging ? .accentColor : .secondary,
+                width: 38,
+                height: 22
+            )
                 .frame(width: 38, height: 38)
-                .foregroundStyle(snapshot.isCharging ? Color.accentColor : Color.secondary)
-                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Battery")
                     .font(.title2.weight(.semibold))
-                Label(snapshot.statusTitle, systemImage: snapshot.powerSource.symbolName)
+                HStack(spacing: 6) {
+                    BatteryLevelSymbol(snapshot: snapshot, tint: .secondary, width: 20, height: 12)
+                    Text(snapshot.statusTitle)
+                }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -27,6 +81,18 @@ struct BatteryHeader: View {
                 .monospacedDigit()
                 .accessibilityLabel("Battery level \(snapshot.percentageText)")
         }
+    }
+}
+
+enum SystemAppLauncher {
+    static func activityMonitorURL() -> URL? {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.ActivityMonitor")
+    }
+
+    @discardableResult
+    static func openActivityMonitor() -> Bool {
+        guard let url = activityMonitorURL() else { return false }
+        return NSWorkspace.shared.open(url)
     }
 }
 

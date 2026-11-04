@@ -77,7 +77,7 @@ enum AppActivityChartMode: String, CaseIterable, Identifiable {
         switch self {
         case .cpu: "CPU"
         case .memory: "Memory"
-        case .energyLevel: "Energy Level"
+        case .energyLevel: "Battery Level"
         }
     }
 

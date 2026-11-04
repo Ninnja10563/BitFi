@@ -29,7 +29,7 @@ Native macOS battery monitor with charge-threshold reminders. Built with Swift, 
 
 Public macOS APIs expose battery monitoring, not arbitrary hardware charge caps. BitFi never claims to stop charging; it provides honest threshold reminders so user can unplug power. It does not modify firmware or use undocumented IORegistry controls.
 
-Public macOS APIs also do not expose per-app battery-energy use. BitFi labels CPU and memory as workload metrics; `Energy Level` is device state-of-charge, not invented per-app energy data.
+Public macOS APIs also do not expose per-app battery-energy use. BitFi labels CPU and memory as workload metrics; `Battery Level` is device state-of-charge, not invented per-app energy data. Use the working Activity Monitor shortcut for macOS’s real per-process Energy Impact.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ BitFi/
 Release DMG build:
 
 ```sh
-Scripts/build_release_dmg.sh 1.1.1
+Scripts/build_release_dmg.sh 1.1.2
 ```
 
-Creates `Artifacts/BitFi-1.1.1-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, BitFi icon, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.
+Creates `Artifacts/BitFi-1.1.2-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, BitFi icon, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.
