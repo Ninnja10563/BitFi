@@ -46,6 +46,7 @@ enum PowerSourceKind: Equatable {
 struct BatterySnapshot: Equatable {
     let currentCapacity: Int?
     let maximumCapacity: Int?
+    let designCapacity: Int?
     let powerSource: PowerSourceKind
     let isCharging: Bool
     let isCharged: Bool
@@ -63,6 +64,7 @@ struct BatterySnapshot: Equatable {
     static let unavailable = BatterySnapshot(
         currentCapacity: nil,
         maximumCapacity: nil,
+        designCapacity: nil,
         powerSource: .unavailable,
         isCharging: false,
         isCharged: false,
@@ -109,8 +111,42 @@ struct BatterySnapshot: Equatable {
         return powerSource.symbolName
     }
 
+    /// Closest native SF Symbol level for current live IOKit capacity.
+    var batterySymbolName: String {
+        guard let percentage else { return "battery.0" }
+
+        switch percentage {
+        case ...10:
+            return "battery.0"
+        case 11...35:
+            return "battery.25"
+        case 36...60:
+            return "battery.50"
+        case 61...85:
+            return "battery.75"
+        default:
+            return "battery.100"
+        }
+    }
+
     var healthText: String {
         healthCondition ?? health ?? "Unavailable"
+    }
+
+    /// Full-charge capacity divided by design capacity when macOS publishes both.
+    var healthCapacityPercentage: Int? {
+        guard let maximumCapacity, let designCapacity, designCapacity > 0 else { return nil }
+        return Int((Double(maximumCapacity) / Double(designCapacity) * 100).rounded())
+    }
+
+    var healthCapacityText: String {
+        healthCapacityPercentage.map { "\($0)%" } ?? "Unavailable"
+    }
+
+    var healthSummaryText: String {
+        guard let healthCapacityPercentage else { return healthText }
+        let condition = healthCondition ?? health
+        return condition.map { "\($0) · \(healthCapacityPercentage)%" } ?? "\(healthCapacityPercentage)%"
     }
 
     var temperatureText: String {

@@ -9,6 +9,8 @@ struct BitFiApp: App {
     @StateObject private var notifications: NotificationService
     @StateObject private var reminder: ChargeReminderEngine
     @StateObject private var loginItem: LoginItemManager
+    @StateObject private var history: BatteryHistoryStore
+    @StateObject private var activityMonitor: AppActivityMonitor
 
     init() {
         let notificationService = NotificationService()
@@ -17,6 +19,8 @@ struct BitFiApp: App {
         _notifications = StateObject(wrappedValue: notificationService)
         _reminder = StateObject(wrappedValue: ChargeReminderEngine(notificationService: notificationService))
         _loginItem = StateObject(wrappedValue: LoginItemManager())
+        _history = StateObject(wrappedValue: BatteryHistoryStore())
+        _activityMonitor = StateObject(wrappedValue: AppActivityMonitor())
     }
 
     var body: some Scene {
@@ -27,6 +31,8 @@ struct BitFiApp: App {
                 .environmentObject(notifications)
                 .environmentObject(reminder)
                 .environmentObject(loginItem)
+                .environmentObject(history)
+                .environmentObject(activityMonitor)
         }
         .defaultSize(width: 900, height: 630)
         .windowResizability(.contentMinSize)
@@ -43,12 +49,24 @@ struct BitFiApp: App {
                 .environmentObject(monitor)
                 .environmentObject(settings)
                 .environmentObject(reminder)
+                .environmentObject(history)
+                .environmentObject(activityMonitor)
         } label: {
-            if settings.showPercentageInMenuBar {
-                Label(monitor.snapshot.percentageText, systemImage: monitor.snapshot.statusSymbolName)
-            } else {
-                Image(systemName: monitor.snapshot.statusSymbolName)
+            HStack(spacing: 3) {
+                Image(systemName: monitor.snapshot.batterySymbolName)
+                    .font(.system(size: 15, weight: .medium))
+                    .imageScale(.medium)
+                if monitor.snapshot.isCharging {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                if settings.showPercentageInMenuBar {
+                    Text(monitor.snapshot.percentageText)
+                        .font(.system(size: 13, weight: .semibold))
+                        .monospacedDigit()
+                }
             }
+            .accessibilityLabel("Battery \(monitor.snapshot.percentageText), \(monitor.snapshot.statusTitle)")
         }
         .menuBarExtraStyle(.window)
 

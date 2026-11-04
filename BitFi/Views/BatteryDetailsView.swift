@@ -29,6 +29,10 @@ struct BatteryDetailsView: View {
                     Section("Health") {
                         BatteryMetricRow(title: "Battery Health", value: monitor.snapshot.health ?? "Unavailable")
                         BatteryMetricRow(title: "Condition", value: monitor.snapshot.healthCondition ?? "Unavailable")
+                        BatteryMetricRow(
+                            title: "Maximum Capacity",
+                            value: monitor.snapshot.healthCapacityText
+                        )
                         BatteryMetricRow(title: "Temperature", value: monitor.snapshot.temperatureText)
                     }
 

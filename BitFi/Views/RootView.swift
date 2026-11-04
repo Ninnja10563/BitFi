@@ -3,12 +3,16 @@ import SwiftUI
 private enum AppSection: Hashable {
     case overview
     case chargeControls
+    case batteryHistory
+    case appActivity
     case batteryDetails
 
     var title: String {
         switch self {
         case .overview: "Overview"
         case .chargeControls: "Charge Controls"
+        case .batteryHistory: "Battery History"
+        case .appActivity: "App Activity"
         case .batteryDetails: "Battery Details"
         }
     }
@@ -17,6 +21,8 @@ private enum AppSection: Hashable {
         switch self {
         case .overview: "rectangle.grid.1x2"
         case .chargeControls: "battery.75percent"
+        case .batteryHistory: "chart.xyaxis.line"
+        case .appActivity: "chart.pie"
         case .batteryDetails: "list.bullet.rectangle"
         }
     }
@@ -28,13 +34,15 @@ struct RootView: View {
     @EnvironmentObject private var notifications: NotificationService
     @EnvironmentObject private var reminder: ChargeReminderEngine
     @EnvironmentObject private var loginItem: LoginItemManager
+    @EnvironmentObject private var history: BatteryHistoryStore
+    @EnvironmentObject private var activityMonitor: AppActivityMonitor
 
     @State private var selection: AppSection? = .overview
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                ForEach([AppSection.overview, .chargeControls, .batteryDetails], id: \.self) { section in
+                ForEach([AppSection.overview, .chargeControls, .batteryHistory, .appActivity, .batteryDetails], id: \.self) { section in
                     Label(section.title, systemImage: section.symbolName)
                         .tag(section)
                 }
@@ -48,6 +56,8 @@ struct RootView: View {
         .task {
             monitor.start()
             reminder.start(monitor: monitor, settings: settings)
+            history.start(monitor: monitor)
+            activityMonitor.start()
             notifications.refreshAuthorization()
             loginItem.refresh()
         }
@@ -62,6 +72,10 @@ struct RootView: View {
             }
         case .chargeControls:
             ChargeControlsView()
+        case .batteryHistory:
+            BatteryHistoryView()
+        case .appActivity:
+            AppActivityView()
         case .batteryDetails:
             BatteryDetailsView()
         }

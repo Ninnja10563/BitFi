@@ -11,7 +11,7 @@ let package = Package(
         .executableTarget(
             name: "BitFi",
             path: "BitFi",
-            exclude: ["Resources/Info.plist"]
+            exclude: ["Resources"]
         )
     ]
 )

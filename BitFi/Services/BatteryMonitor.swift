@@ -56,6 +56,7 @@ final class BatteryMonitor: NSObject, ObservableObject {
         snapshot = BatterySnapshot(
             currentCapacity: currentCapacity,
             maximumCapacity: maximumCapacity,
+            designCapacity: integer(for: "DesignCapacity", in: description),
             powerSource: PowerSourceKind(powerSourceState: string(for: "Power Source State", in: description)),
             isCharging: isCharging,
             isCharged: boolean(for: "Is Charged", in: description) ?? false,

@@ -6,7 +6,7 @@ struct BatteryHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
-            Image(systemName: snapshot.statusSymbolName)
+            Image(systemName: snapshot.batterySymbolName)
                 .font(.system(size: 24, weight: .medium))
                 .frame(width: 38, height: 38)
                 .foregroundStyle(snapshot.isCharging ? Color.accentColor : Color.secondary)

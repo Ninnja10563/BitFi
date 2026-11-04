@@ -1,19 +1,35 @@
 # BitFi
 
+<p align="center">
+  <img src="Docs/images/bitfi-icon.png" width="128" alt="BitFi app icon">
+</p>
+
+<p align="center"><strong>Native macOS battery monitoring, honest charge care.</strong></p>
+
+<p align="center">
+  <img src="Docs/images/bitfi-hero.png" width="900" alt="BitFi installer artwork — drag BitFi to Applications">
+</p>
+
 Native macOS battery monitor with charge-threshold reminders. Built with Swift, SwiftUI, IOKit, ServiceManagement, UserNotifications. No Electron, web views, private charger APIs, privileged helpers, dependencies.
 
 ## What works
 
 - Live battery percentage, charge state, power source, time estimates, health, condition, temperature, voltage, current, cycle count when macOS reports each field.
-- Automatic IOKit power-source updates, wake refresh, menu bar extra with live status.
+- Battery health condition plus maximum-capacity percentage when macOS publishes design capacity.
+- Automatic IOKit power-source updates, wake refresh, menu bar extra with correctly level-matched battery glyph and live percentage.
 - Persistent 50–100% custom threshold; 70%, 80%, 85%, 90% presets.
 - Real local notification at threshold. `Charge to 100% This Session` pauses reminder until power disconnects.
 - Login-at-login via `SMAppService.mainApp`.
 - Native settings: General, Battery, Menu Bar, Notifications, About.
+- Local battery-history chart: samples survive quits, restart, and shutdown. Gaps remain visible while BitFi or Mac was not running.
+- Menu bar panels: Status, 24-hour battery history, App Activity.
+- App Activity pie modes: real CPU activity, resident memory, and actual device battery level.
 
 ## Important limitation
 
 Public macOS APIs expose battery monitoring, not arbitrary hardware charge caps. BitFi never claims to stop charging; it provides honest threshold reminders so user can unplug power. It does not modify firmware or use undocumented IORegistry controls.
+
+Public macOS APIs also do not expose per-app battery-energy use. BitFi labels CPU and memory as workload metrics; `Energy Level` is device state-of-charge, not invented per-app energy data.
 
 ## Requirements
 
@@ -44,4 +60,10 @@ BitFi/
 
 ## Release
 
-`v1.0.0` publishes complete source and Xcode project. Build locally in Xcode for unsigned development use; distribute signed/notarized `.app` only from trusted release pipeline.
+Release DMG build:
+
+```sh
+Scripts/build_release_dmg.sh 1.1.0
+```
+
+Creates `Artifacts/BitFi-1.1.0-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, BitFi icon, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.

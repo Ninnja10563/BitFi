@@ -35,6 +35,11 @@ struct OverviewView: View {
                                     : monitor.snapshot.timeToEmptyText,
                                 symbolName: "clock"
                             )
+                            BatteryMetricRow(
+                                title: "Battery health",
+                                value: monitor.snapshot.healthSummaryText,
+                                symbolName: "heart.text.square"
+                            )
                         }
                         .padding(.vertical, 4)
                     } label: {

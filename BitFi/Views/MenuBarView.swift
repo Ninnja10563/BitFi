@@ -1,11 +1,33 @@
 import AppKit
+import Charts
 import SwiftUI
+
+private enum MenuBarPanel: String, CaseIterable, Identifiable {
+    case status
+    case history
+    case apps
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .status: "Status"
+        case .history: "History"
+        case .apps: "Apps"
+        }
+    }
+}
 
 struct MenuBarView: View {
     @Environment(\.openWindow) private var openWindow
     @EnvironmentObject private var monitor: BatteryMonitor
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var reminder: ChargeReminderEngine
+    @EnvironmentObject private var history: BatteryHistoryStore
+    @EnvironmentObject private var activityMonitor: AppActivityMonitor
+
+    @State private var selectedPanel: MenuBarPanel = .status
+    @State private var selectedAppMode: AppActivityChartMode = .cpu
 
     private var chargeLimitBinding: Binding<Double> {
         Binding(
@@ -16,9 +38,68 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Picker("Menu bar content", selection: $selectedPanel) {
+                ForEach(MenuBarPanel.allCases) { panel in
+                    Text(panel.title).tag(panel)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+
+            Divider().padding(.vertical, 14)
+
+            selectedPanelView
+
+            Divider().padding(.vertical, 14)
+
+            HStack {
+                Button("Open BitFi") {
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                Spacer()
+                SettingsLink {
+                    Text("Settings…")
+                }
+            }
+        }
+        .padding(16)
+        .frame(width: 354)
+        .onAppear {
+            monitor.start()
+            history.start(monitor: monitor)
+            activityMonitor.start()
+        }
+        .onChange(of: selectedPanel) { _, panel in
+            if panel == .apps {
+                activityMonitor.refresh()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var selectedPanelView: some View {
+        switch selectedPanel {
+        case .status:
+            statusPanel
+        case .history:
+            historyPanel
+        case .apps:
+            appsPanel
+        }
+    }
+
+    private var statusPanel: some View {
+        VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Battery")
-                    .font(.headline)
+                HStack(spacing: 7) {
+                    Image(systemName: monitor.snapshot.batterySymbolName)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    Text("Battery")
+                        .font(.headline)
+                }
                 Spacer()
                 Text(monitor.snapshot.percentageText)
                     .font(.title3.weight(.semibold))
@@ -34,14 +115,8 @@ struct MenuBarView: View {
                 VStack(spacing: 11) {
                     BatteryMetricRow(title: "Status", value: monitor.snapshot.statusTitle)
                     BatteryMetricRow(title: "Power Source", value: monitor.snapshot.powerSource.title)
-                    BatteryMetricRow(
-                        title: "Battery Health",
-                        value: monitor.snapshot.healthText
-                    )
-                    BatteryMetricRow(
-                        title: "Temperature",
-                        value: monitor.snapshot.temperatureText
-                    )
+                    BatteryMetricRow(title: "Battery Health", value: monitor.snapshot.healthSummaryText)
+                    BatteryMetricRow(title: "Temperature", value: monitor.snapshot.temperatureText)
                 }
 
                 Divider().padding(.vertical, 14)
@@ -82,22 +157,185 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 22)
             }
+        }
+    }
 
-            Divider().padding(.vertical, 14)
+    private var historyPanel: some View {
+        let records = history.records(in: .day)
+        let segments = history.segments(in: .day)
 
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Button("Open BitFi") {
-                    openWindow(id: "main")
-                    NSApp.activate(ignoringOtherApps: true)
-                }
+                Label("Battery History", systemImage: "chart.xyaxis.line")
+                    .font(.headline)
                 Spacer()
-                SettingsLink {
-                    Text("Settings…")
+                Text("24 hours")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if records.isEmpty {
+                ContentUnavailableView {
+                    Label("Gathering Samples", systemImage: "chart.xyaxis.line")
+                } description: {
+                    Text("BitFi saves readings while running.")
+                }
+                .frame(maxWidth: .infinity, minHeight: 156)
+            } else {
+                Chart {
+                    ForEach(segments) { segment in
+                        ForEach(segment.records) { record in
+                            LineMark(
+                                x: .value("Time", record.recordedAt),
+                                y: .value("Charge", record.percentage),
+                                series: .value("Continuous samples", segment.id)
+                            )
+                            .foregroundStyle(.tint)
+                            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                        }
+                    }
+                    if records.count == 1, let record = records.first {
+                        PointMark(
+                            x: .value("Time", record.recordedAt),
+                            y: .value("Charge", record.percentage)
+                        )
+                        .foregroundStyle(.tint)
+                        .symbolSize(42)
+                    }
+                }
+                .chartYScale(domain: 0...100)
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: [0, 50, 100]) { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let percentage = value.as(Int.self) {
+                                Text("\(percentage)%")
+                            }
+                        }
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 3))
+                }
+                .frame(height: 156)
+                .accessibilityLabel("Battery charge history")
+
+                HStack {
+                    Text("Latest \(records.last?.percentage ?? 0)%")
+                    Spacer()
+                    Text("\(records.count) samples")
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
+                .monospacedDigit()
+            }
+
+            Text("Gaps mean BitFi was not running, or Mac was asleep or shut down.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var appsPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("App Activity", systemImage: "chart.pie")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    monitor.refresh()
+                    activityMonitor.refresh()
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                .help("Refresh app activity")
+            }
+
+            Picker("Activity mode", selection: $selectedAppMode) {
+                ForEach(AppActivityChartMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
                 }
             }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+
+            if selectedAppMode == .energyLevel {
+                energyLevelPanel
+            } else if let measure = selectedAppMode.measure {
+                appMeasurementPanel(for: measure)
+            }
         }
-        .padding(16)
-        .frame(width: 330)
-        .onAppear { monitor.refresh() }
+        .onChange(of: selectedAppMode) { _, mode in
+            if mode != .energyLevel {
+                activityMonitor.refresh()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var energyLevelPanel: some View {
+        if monitor.snapshot.isAvailable {
+            HStack(spacing: 16) {
+                BatteryEnergyLevelPieChart(snapshot: monitor.snapshot, diameter: 136)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(monitor.snapshot.percentageText)
+                        .font(.title3.weight(.semibold))
+                        .monospacedDigit()
+                    Text(monitor.snapshot.statusTitle)
+                        .font(.callout)
+                    Text(monitor.snapshot.powerSource.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            Text("Actual device charge. Per-app battery energy is not public macOS data.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(monitor.snapshot.unavailableReason ?? "Battery data unavailable.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func appMeasurementPanel(for measure: AppActivityMeasure) -> some View {
+        let slices = activityMonitor.slices(for: measure)
+
+        if let errorMessage = activityMonitor.errorMessage {
+            Text(errorMessage)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
+        } else if slices.isEmpty {
+            Text("No visible app bundles reported measurable \(measure.title.lowercased()) activity in this sample.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
+        } else {
+            HStack(alignment: .center, spacing: 16) {
+                AppMetricPieChart(slices: slices, measure: measure, diameter: 136)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(slices.prefix(4)) { slice in
+                        HStack(spacing: 8) {
+                            Text(slice.name)
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            Text(slice.valueText(for: measure))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                        .font(.caption)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
     }
 }
