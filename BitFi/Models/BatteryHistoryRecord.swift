@@ -20,22 +20,43 @@ enum BatteryHistoryRange: String, CaseIterable, Identifiable {
     case day
     case week
     case month
+    case sixMonths
+    case year
+    case all
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .day: "24 Hours"
-        case .week: "7 Days"
-        case .month: "30 Days"
+        case .day: "1D"
+        case .week: "1W"
+        case .month: "1M"
+        case .sixMonths: "6M"
+        case .year: "1Y"
+        case .all: "All"
         }
     }
 
-    var duration: TimeInterval {
+    var accessibilityTitle: String {
+        switch self {
+        case .day: "1 Day"
+        case .week: "1 Week"
+        case .month: "1 Month"
+        case .sixMonths: "6 Months"
+        case .year: "1 Year"
+        case .all: "All Saved History"
+        }
+    }
+
+    /// `nil` means the complete locally retained history.
+    var visibleDuration: TimeInterval? {
         switch self {
         case .day: 24 * 60 * 60
         case .week: 7 * 24 * 60 * 60
         case .month: 30 * 24 * 60 * 60
+        case .sixMonths: 183 * 24 * 60 * 60
+        case .year: 365 * 24 * 60 * 60
+        case .all: nil
         }
     }
 }
