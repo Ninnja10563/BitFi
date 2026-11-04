@@ -102,7 +102,7 @@ struct BatteryHistoryView: View {
 
                 GroupBox {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Samples save locally for up to two years while BitFi runs. A line break means BitFi was not running, or your Mac was asleep or shut down; BitFi never invents readings for that gap.")
+                        Text("Samples save locally for up to two years while BitFi runs. The line joins recorded samples; BitFi never creates a reading while it is unavailable.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                         if let persistenceError = history.persistenceError {

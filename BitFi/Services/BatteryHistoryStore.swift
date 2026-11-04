@@ -85,26 +85,9 @@ final class BatteryHistoryStore: ObservableObject {
     func segments(from startDate: Date, through endDate: Date) -> [BatteryHistorySegment] {
         let filteredRecords = records(from: startDate, through: endDate)
         guard !filteredRecords.isEmpty else { return [] }
-
-        var segments: [BatteryHistorySegment] = []
-        var currentSegment: [BatteryHistoryRecord] = []
-        var segmentID = 0
-        let gapThreshold: TimeInterval = 15 * 60
-
-        for record in filteredRecords {
-            if let previous = currentSegment.last,
-               record.recordedAt.timeIntervalSince(previous.recordedAt) > gapThreshold {
-                segments.append(BatteryHistorySegment(id: segmentID, records: currentSegment))
-                segmentID += 1
-                currentSegment = []
-            }
-            currentSegment.append(record)
-        }
-
-        if !currentSegment.isEmpty {
-            segments.append(BatteryHistorySegment(id: segmentID, records: currentSegment))
-        }
-        return segments
+        // Connect adjacent recorded samples, including across an unavailable interval.
+        // This changes only visual interpolation; no synthetic history record is created.
+        return [BatteryHistorySegment(id: 0, records: filteredRecords)]
     }
 
     func chartSegments(
