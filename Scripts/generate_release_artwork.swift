@@ -46,17 +46,30 @@ func makeIcon() -> NSImage {
 
     let body = NSRect(x: 188, y: 348, width: 572, height: 328)
     let terminal = NSRect(x: 760, y: 448, width: 74, height: 128)
-    let bodyPath = NSBezierPath(roundedRect: body, xRadius: 54, yRadius: 54)
+    // Match BatteryLevelSymbol's menu-bar geometry: rounded body, terminal, and fill.
+    let bodyPath = NSBezierPath(
+        roundedRect: body,
+        xRadius: body.height * 0.23,
+        yRadius: body.height * 0.23
+    )
     bodyPath.lineWidth = 32
     NSColor.white.withAlphaComponent(0.96).setStroke()
     bodyPath.stroke()
     NSColor.white.withAlphaComponent(0.93).setFill()
-    NSBezierPath(roundedRect: terminal, xRadius: 18, yRadius: 18).fill()
+    NSBezierPath(
+        roundedRect: terminal,
+        xRadius: terminal.height * 0.24,
+        yRadius: terminal.height * 0.24
+    ).fill()
 
     // Fixed 75% level: visual identity, not a live battery reading.
     let charge = NSRect(x: 226, y: 386, width: 372, height: 252)
     NSColor.white.withAlphaComponent(0.93).setFill()
-    NSBezierPath(roundedRect: charge, xRadius: 28, yRadius: 28).fill()
+    NSBezierPath(
+        roundedRect: charge,
+        xRadius: charge.height * 0.20,
+        yRadius: charge.height * 0.20
+    ).fill()
 
     return image
 }
