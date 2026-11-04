@@ -70,8 +70,12 @@ struct MenuBarView: View {
             history.start(monitor: monitor)
             activityMonitor.start()
         }
+        .onDisappear {
+            activityMonitor.setLiveSampling(false, for: .menuBar)
+        }
         .onChange(of: selectedPanel) { _, panel in
-            if panel == .apps {
+            updateMenuBarLiveSampling()
+            if panel == .apps, selectedAppMode.measure != nil {
                 activityMonitor.refresh()
             }
         }
@@ -261,6 +265,12 @@ struct MenuBarView: View {
             .labelsHidden()
             .pickerStyle(.segmented)
 
+            if selectedAppMode.measure != nil {
+                Label("Live · 2 sec", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if selectedAppMode == .energyLevel {
                 energyLevelPanel
             } else if let measure = selectedAppMode.measure {
@@ -268,6 +278,8 @@ struct MenuBarView: View {
             }
         }
         .onChange(of: selectedAppMode) { _, mode in
+            updateMenuBarLiveSampling()
+            monitor.refresh()
             if mode != .energyLevel {
                 activityMonitor.refresh()
             }
@@ -337,5 +349,10 @@ struct MenuBarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+    }
+
+    private func updateMenuBarLiveSampling() {
+        let shouldSample = selectedPanel == .apps && selectedAppMode.measure != nil
+        activityMonitor.setLiveSampling(shouldSample, for: .menuBar)
     }
 }

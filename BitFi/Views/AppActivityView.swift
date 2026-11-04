@@ -33,6 +33,10 @@ struct AppActivityView: View {
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 420)
 
+                Label(liveUpdateText, systemImage: "dot.radiowaves.left.and.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 chartContent
 
                 GroupBox {
@@ -56,7 +60,15 @@ struct AppActivityView: View {
             .frame(maxWidth: 900, alignment: .leading)
         }
         .navigationTitle("App Activity")
+        .onAppear {
+            updateLiveSampling()
+        }
+        .onDisappear {
+            activityMonitor.setLiveSampling(false, for: .mainWindow)
+        }
         .onChange(of: selectedMode) { _, mode in
+            updateLiveSampling()
+            monitor.refresh()
             if mode != .energyLevel {
                 activityMonitor.refresh()
             }
@@ -139,6 +151,16 @@ struct AppActivityView: View {
         case .energyLevel:
             "Energy Level shows actual battery state of charge reported by macOS. macOS does not expose a public per-app battery-energy API."
         }
+    }
+
+    private var liveUpdateText: String {
+        selectedMode.measure == nil
+            ? "Updates from live battery-state changes"
+            : "Live updates every 2 seconds while open"
+    }
+
+    private func updateLiveSampling() {
+        activityMonitor.setLiveSampling(selectedMode.measure != nil, for: .mainWindow)
     }
 }
 

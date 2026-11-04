@@ -23,7 +23,7 @@ Native macOS battery monitor with charge-threshold reminders. Built with Swift, 
 - Native settings: General, Battery, Menu Bar, Notifications, About.
 - Local battery-history chart: samples survive quits, restart, and shutdown. Gaps remain visible while BitFi or Mac was not running.
 - Menu bar panels: Status, 24-hour battery history, App Activity.
-- App Activity pie modes: real CPU activity, resident memory, and actual device battery level.
+- App Activity pie modes: real CPU activity, resident memory, and actual device battery level. CPU/memory refresh every two seconds only while their chart is visible.
 
 ## Important limitation
 
@@ -63,7 +63,7 @@ BitFi/
 Release DMG build:
 
 ```sh
-Scripts/build_release_dmg.sh 1.1.0
+Scripts/build_release_dmg.sh 1.1.1
 ```
 
-Creates `Artifacts/BitFi-1.1.0-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, BitFi icon, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.
+Creates `Artifacts/BitFi-1.1.1-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, BitFi icon, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.

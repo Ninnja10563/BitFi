@@ -2,6 +2,11 @@ import AppKit
 import Combine
 import Foundation
 
+enum AppActivitySamplingClient: Hashable {
+    case mainWindow
+    case menuBar
+}
+
 /// Reports public process CPU and resident-memory data for visible app bundles.
 @MainActor
 final class AppActivityMonitor: NSObject, ObservableObject {
@@ -11,21 +16,21 @@ final class AppActivityMonitor: NSObject, ObservableObject {
 
     private var timer: Timer?
     private var hasStarted = false
+    private var isRefreshing = false
+    private var liveSamplingClients = Set<AppActivitySamplingClient>()
+
+    private let liveRefreshInterval: TimeInterval = 2
 
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
         refresh()
-        timer = Timer.scheduledTimer(
-            timeInterval: 30,
-            target: self,
-            selector: #selector(refreshFromTimer),
-            userInfo: nil,
-            repeats: true
-        )
     }
 
     func refresh() {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+
         let targets = applicationTargets()
         let monitor = self
 
@@ -33,18 +38,51 @@ final class AppActivityMonitor: NSObject, ObservableObject {
             let result = Self.readActivity(for: targets)
             await MainActor.run {
                 monitor.apply(result)
+                monitor.isRefreshing = false
             }
         }
+    }
+
+    /// Keeps expensive process sampling active only while a CPU or memory chart is visible.
+    func setLiveSampling(_ isActive: Bool, for client: AppActivitySamplingClient) {
+        start()
+
+        if isActive {
+            liveSamplingClients.insert(client)
+            refresh()
+        } else {
+            liveSamplingClients.remove(client)
+        }
+        updateTimer()
     }
 
     func stop() {
         timer?.invalidate()
         timer = nil
+        liveSamplingClients.removeAll()
+        isRefreshing = false
         hasStarted = false
     }
 
     @objc private func refreshFromTimer() {
         refresh()
+    }
+
+    private func updateTimer() {
+        timer?.invalidate()
+        timer = nil
+
+        guard !liveSamplingClients.isEmpty else { return }
+        let timer = Timer(
+            timeInterval: liveRefreshInterval,
+            target: self,
+            selector: #selector(refreshFromTimer),
+            userInfo: nil,
+            repeats: true
+        )
+        timer.tolerance = 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     private func applicationTargets() -> [ApplicationTarget] {
