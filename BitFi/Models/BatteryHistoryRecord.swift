@@ -66,6 +66,17 @@ struct BatteryHistorySegment: Identifiable {
     let records: [BatteryHistoryRecord]
 }
 
+/// Lightweight metadata for a visible history range. Avoids copying retained samples while a chart is hovered.
+struct BatteryHistoryWindow {
+    let count: Int
+    let first: BatteryHistoryRecord?
+    let last: BatteryHistoryRecord?
+
+    static let empty = BatteryHistoryWindow(count: 0, first: nil, last: nil)
+
+    var isEmpty: Bool { count == 0 }
+}
+
 enum AppActivityMeasure: String, CaseIterable, Identifiable {
     case cpu
     case memory

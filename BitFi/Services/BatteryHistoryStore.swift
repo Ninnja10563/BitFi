@@ -68,11 +68,18 @@ final class BatteryHistoryStore: ObservableObject {
     }
 
     func records(from startDate: Date, through endDate: Date) -> [BatteryHistoryRecord] {
-        guard startDate <= endDate, !records.isEmpty else { return [] }
-        let startIndex = firstIndex(onOrAfter: startDate)
-        let endIndex = firstIndex(after: endDate)
-        guard startIndex < endIndex else { return [] }
-        return Array(records[startIndex..<endIndex])
+        guard let recordRange = recordRange(from: startDate, through: endDate) else { return [] }
+        return Array(records[recordRange])
+    }
+
+    func window(from startDate: Date, through endDate: Date) -> BatteryHistoryWindow {
+        guard let recordRange = recordRange(from: startDate, through: endDate),
+              let first = records[recordRange].first,
+              let last = records[recordRange].last
+        else {
+            return .empty
+        }
+        return BatteryHistoryWindow(count: recordRange.count, first: first, last: last)
     }
 
     func segments(from startDate: Date, through endDate: Date) -> [BatteryHistorySegment] {
@@ -277,5 +284,13 @@ final class BatteryHistoryStore: ObservableObject {
 
     private func invalidateChartCache() {
         chartCache = nil
+    }
+
+    private func recordRange(from startDate: Date, through endDate: Date) -> Range<Int>? {
+        guard startDate <= endDate, !records.isEmpty else { return nil }
+        let startIndex = firstIndex(onOrAfter: startDate)
+        let endIndex = firstIndex(after: endDate)
+        guard startIndex < endIndex else { return nil }
+        return startIndex..<endIndex
     }
 }

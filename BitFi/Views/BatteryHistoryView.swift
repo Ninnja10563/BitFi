@@ -48,8 +48,8 @@ struct BatteryHistoryView: View {
         history.chartSegments(from: chartStart, through: chartEnd)
     }
 
-    private var visibleRecords: [BatteryHistoryRecord] {
-        history.records(from: visibleStart, through: visibleEnd)
+    private var visibleWindow: BatteryHistoryWindow {
+        history.window(from: visibleStart, through: visibleEnd)
     }
 
     private var hasHistory: Bool {
@@ -97,7 +97,7 @@ struct BatteryHistoryView: View {
                     historyNavigation
                     historyChart
                     historyInspector
-                    HistorySummary(records: visibleRecords)
+                    HistorySummary(window: visibleWindow)
                 }
 
                 GroupBox {
@@ -229,7 +229,7 @@ struct BatteryHistoryView: View {
         }
         .frame(height: 290)
         .overlay {
-            if visibleRecords.isEmpty {
+            if visibleWindow.isEmpty {
                 ContentUnavailableView {
                     Label("No Samples in This Window", systemImage: "chart.xyaxis.line")
                 } description: {
@@ -286,7 +286,7 @@ struct BatteryHistoryView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text("\(visibleRecords.count) samples")
+            Text("\(visibleWindow.count) samples")
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
         }
@@ -317,10 +317,10 @@ struct BatteryHistoryView: View {
 }
 
 private struct HistorySummary: View {
-    let records: [BatteryHistoryRecord]
+    let window: BatteryHistoryWindow
 
-    private var first: BatteryHistoryRecord? { records.first }
-    private var latest: BatteryHistoryRecord? { records.last }
+    private var first: BatteryHistoryRecord? { window.first }
+    private var latest: BatteryHistoryRecord? { window.last }
 
     var body: some View {
         HStack(spacing: 32) {
