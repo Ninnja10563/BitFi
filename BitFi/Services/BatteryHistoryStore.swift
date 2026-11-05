@@ -127,22 +127,27 @@ final class BatteryHistoryStore: ObservableObject {
         return result
     }
 
-    func nearestRecord(to date: Date) -> BatteryHistoryRecord? {
-        guard !records.isEmpty else { return nil }
+    /// Finds an actual saved reading within a chart's visible interval.
+    /// This keeps hover inspection honest: no off-screen record is substituted.
+    func nearestRecord(
+        to date: Date,
+        from startDate: Date,
+        through endDate: Date
+    ) -> BatteryHistoryRecord? {
+        guard let range = recordRange(from: startDate, through: endDate) else { return nil }
+        return nearestRecord(to: date, in: range)
+    }
 
-        var low = 0
-        var high = records.count
-        while low < high {
-            let middle = (low + high) / 2
-            if records[middle].recordedAt < date {
-                low = middle + 1
-            } else {
-                high = middle
-            }
-        }
+    private func nearestRecord(to date: Date, in recordRange: Range<Int>) -> BatteryHistoryRecord? {
+        guard !recordRange.isEmpty else { return nil }
 
-        let later = low < records.count ? records[low] : nil
-        let earlier = low > 0 ? records[low - 1] : nil
+        let insertionIndex = min(
+            max(firstIndex(onOrAfter: date), recordRange.lowerBound),
+            recordRange.upperBound
+        )
+        let later = insertionIndex < recordRange.upperBound ? records[insertionIndex] : nil
+        let earlierIndex = insertionIndex - 1
+        let earlier = earlierIndex >= recordRange.lowerBound ? records[earlierIndex] : nil
         switch (earlier, later) {
         case let (earlier?, later?):
             return date.timeIntervalSince(earlier.recordedAt) <= later.recordedAt.timeIntervalSince(date)

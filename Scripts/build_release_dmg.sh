@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 
-VERSION="${1:-1.2.7}"
+VERSION="${1:-1.2.8}"
 ROOT_DIRECTORY="$(cd "$(dirname "$0")/.." && pwd)"
 ARTIFACT_DIRECTORY="$ROOT_DIRECTORY/Artifacts"
 APP_DIRECTORY="$ARTIFACT_DIRECTORY/BitFi.app"
@@ -26,7 +26,6 @@ cp "$ROOT_DIRECTORY/BitFi/Resources/BitFi.icns" "$APP_CONTENTS/Resources/BitFi.i
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable BitFi" "$APP_CONTENTS/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ninnja.BitFi" "$APP_CONTENTS/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" "$APP_CONTENTS/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION}" "$APP_CONTENTS/Info.plist"
 codesign --force --deep --sign - "$APP_DIRECTORY"
 
 "$ROOT_DIRECTORY/Scripts/create_dmg.sh" \

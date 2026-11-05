@@ -81,47 +81,36 @@ func makeDMGBackground() -> NSImage {
     defer { image.unlockFocus() }
 
     let canvas = NSRect(origin: .zero, size: size)
-    NSColor(calibratedRed: 0.075, green: 0.078, blue: 0.092, alpha: 1).setFill()
+    // Keep installer canvas deliberately quiet. Finder icons remain focal point.
+    NSColor(calibratedRed: 0.963, green: 0.963, blue: 0.975, alpha: 1).setFill()
     canvas.fill()
 
-    let panel = NSBezierPath(roundedRect: NSRect(x: 44, y: 44, width: 1112, height: 672), xRadius: 34, yRadius: 34)
-    NSColor.white.withAlphaComponent(0.035).setFill()
-    panel.fill()
-    NSColor.white.withAlphaComponent(0.08).setStroke()
-    panel.lineWidth = 1
-    panel.stroke()
-
-    let ghostBody = NSBezierPath(roundedRect: NSRect(x: 842, y: 510, width: 190, height: 112), xRadius: 18, yRadius: 18)
-    ghostBody.lineWidth = 8
-    NSColor(calibratedRed: 0.25, green: 0.55, blue: 1, alpha: 0.12).setStroke()
-    ghostBody.stroke()
-    NSColor(calibratedRed: 0.25, green: 0.55, blue: 1, alpha: 0.12).setFill()
-    NSBezierPath(roundedRect: NSRect(x: 1034, y: 545, width: 18, height: 42), xRadius: 5, yRadius: 5).fill()
-
-    drawText("BitFi", in: NSRect(x: 84, y: 630, width: 400, height: 68), font: .systemFont(ofSize: 56, weight: .bold), color: .white)
-    drawText("Battery care. Clear status.", in: NSRect(x: 88, y: 587, width: 430, height: 36), font: .systemFont(ofSize: 23, weight: .regular), color: NSColor.white.withAlphaComponent(0.62))
-
-    let start = NSPoint(x: 332, y: 336)
-    let end = NSPoint(x: 864, y: 336)
+    let start = NSPoint(x: 464, y: 380)
+    let end = NSPoint(x: 770, y: 380)
     let arrow = NSBezierPath()
     arrow.move(to: start)
     arrow.line(to: end)
-    arrow.lineWidth = 3
+    arrow.lineWidth = 3.5
     arrow.lineCapStyle = .round
-    NSColor(calibratedRed: 0.30, green: 0.60, blue: 1, alpha: 0.58).setStroke()
+    NSColor(calibratedWhite: 0.30, alpha: 0.72).setStroke()
     arrow.stroke()
 
     let arrowHead = NSBezierPath()
-    arrowHead.move(to: NSPoint(x: 864, y: 336))
-    arrowHead.line(to: NSPoint(x: 832, y: 357))
-    arrowHead.move(to: NSPoint(x: 864, y: 336))
-    arrowHead.line(to: NSPoint(x: 832, y: 315))
-    arrowHead.lineWidth = 3
+    arrowHead.move(to: end)
+    arrowHead.line(to: NSPoint(x: 740, y: 402))
+    arrowHead.move(to: end)
+    arrowHead.line(to: NSPoint(x: 740, y: 358))
+    arrowHead.lineWidth = 3.5
     arrowHead.lineCapStyle = .round
     arrowHead.stroke()
 
-    drawText("Drag BitFi to Applications", in: NSRect(x: 300, y: 188, width: 600, height: 42), font: .systemFont(ofSize: 22, weight: .medium), color: NSColor.white.withAlphaComponent(0.78), alignment: .center)
-    drawText("Native macOS battery monitoring", in: NSRect(x: 300, y: 88, width: 600, height: 30), font: .systemFont(ofSize: 16, weight: .regular), color: NSColor.white.withAlphaComponent(0.35), alignment: .center)
+    drawText(
+        "Drag BitFi to Applications",
+        in: NSRect(x: 260, y: 180, width: 680, height: 38),
+        font: .systemFont(ofSize: 20, weight: .medium),
+        color: NSColor(calibratedWhite: 0.22, alpha: 0.72),
+        alignment: .center
+    )
 
     return image
 }

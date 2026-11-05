@@ -20,9 +20,6 @@ enum DockIconVisibility {
         }
     }
 
-    static func hideForMenuBarMode() {
-        NSApp.setActivationPolicy(.accessory)
-    }
 }
 
 @MainActor
@@ -30,7 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowObservers: [NSObjectProtocol] = []
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        DockIconVisibility.hideForMenuBarMode()
+        // Start as a normal app so a Finder launch creates its initial window.
+        // Closing every document window later returns us to menu-bar-only mode.
+        DockIconVisibility.showForWindow()
         observeWindowLifecycle()
     }
 

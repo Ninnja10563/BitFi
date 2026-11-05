@@ -128,6 +128,9 @@ struct BatteryHistoryView: View {
             selectedRecord = nil
             scrollToLatest()
         }
+        .onChange(of: scrollPosition) { _, _ in
+            selectedRecord = nil
+        }
         .onChange(of: history.latestRecordedAt) { _, _ in
             let wasAtLatest = !canMoveForward
             timelineEnd = .now
@@ -215,7 +218,11 @@ struct BatteryHistoryView: View {
                                 selectedRecord = nil
                                 return
                             }
-                            let nearestRecord = history.nearestRecord(to: date)
+                            let nearestRecord = history.nearestRecord(
+                                to: date,
+                                from: visibleStart,
+                                through: visibleEnd
+                            )
                             if selectedRecord?.id != nearestRecord?.id {
                                 selectedRecord = nearestRecord
                             }
@@ -238,6 +245,7 @@ struct BatteryHistoryView: View {
             }
         }
         .accessibilityLabel("Scrollable battery charge history")
+        .accessibilityHint("Hover a saved sample to show its time and charge.")
     }
 
     @ChartContentBuilder
@@ -267,7 +275,15 @@ struct BatteryHistoryView: View {
                 y: .value("Selected charge", selectedRecord.percentage)
             )
             .foregroundStyle(.tint)
-            .symbolSize(56)
+            .symbolSize(64)
+            .annotation(
+                position: selectedRecord.percentage >= 72 ? .bottom : .top,
+                alignment: .center,
+                spacing: 9
+            ) {
+                HistoryHoverCallout(record: selectedRecord)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -351,5 +367,30 @@ private struct HistoryMetric: View {
                 .font(.headline)
                 .monospacedDigit()
         }
+    }
+}
+
+private struct HistoryHoverCallout: View {
+    let record: BatteryHistoryRecord
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Text("\(record.percentage)%")
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+            Text(record.recordedAt.formatted(date: .abbreviated, time: .shortened))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: Capsule(style: .continuous))
+        .overlay {
+            Capsule(style: .continuous)
+                .stroke(.quaternary, lineWidth: 1)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(record.percentage) percent at \(record.recordedAt.formatted(date: .abbreviated, time: .shortened))")
     }
 }

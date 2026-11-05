@@ -28,6 +28,7 @@ struct MenuBarView: View {
 
     @State private var selectedPanel: MenuBarPanel = .status
     @State private var selectedAppMode: AppActivityChartMode = .cpu
+    @State private var selectedHistoryRecord: BatteryHistoryRecord?
     @State private var systemAppMessage: String?
 
     private var chargeLimitBinding: Binding<Double> {
@@ -77,6 +78,9 @@ struct MenuBarView: View {
             activityMonitor.setLiveSampling(false, for: .menuBar)
         }
         .onChange(of: selectedPanel) { _, panel in
+            if panel != .history {
+                selectedHistoryRecord = nil
+            }
             updateMenuBarLiveSampling()
             if panel == .apps, selectedAppMode.measure != nil {
                 activityMonitor.refresh()
@@ -170,8 +174,10 @@ struct MenuBarView: View {
     }
 
     private var historyPanel: some View {
-        let records = history.records(in: .day)
-        let segments = history.segments(in: .day)
+        let endDate = Date.now
+        let startDate = endDate.addingTimeInterval(-24 * 60 * 60)
+        let records = history.records(from: startDate, through: endDate)
+        let segments = history.segments(from: startDate, through: endDate)
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -191,58 +197,150 @@ struct MenuBarView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 156)
             } else {
-                Chart {
-                    ForEach(segments) { segment in
-                        ForEach(segment.records) { record in
-                            LineMark(
-                                x: .value("Time", record.recordedAt),
-                                y: .value("Charge", record.percentage),
-                                series: .value("Continuous samples", segment.id)
-                            )
-                            .foregroundStyle(.tint)
-                            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                        }
-                    }
-                    if records.count == 1, let record = records.first {
-                        PointMark(
-                            x: .value("Time", record.recordedAt),
-                            y: .value("Charge", record.percentage)
-                        )
-                        .foregroundStyle(.tint)
-                        .symbolSize(42)
-                    }
-                }
-                .chartYScale(domain: 0...100)
-                .chartYAxis {
-                    AxisMarks(position: .leading, values: [0, 50, 100]) { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let percentage = value.as(Int.self) {
-                                Text("\(percentage)%")
-                            }
-                        }
-                    }
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 3))
-                }
-                .frame(height: 156)
-                .accessibilityLabel("Battery charge history")
-
-                HStack {
-                    Text("Latest \(records.last?.percentage ?? 0)%")
-                    Spacer()
-                    Text("\(records.count) samples")
-                        .foregroundStyle(.secondary)
-                }
-                .font(.caption)
-                .monospacedDigit()
+                menuBarHistoryChart(records: records, segments: segments)
+                menuBarHistoryCaption(records: records)
             }
 
             Text("Gaps mean BitFi was not running, or Mac was asleep or shut down.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func menuBarHistoryChart(
+        records: [BatteryHistoryRecord],
+        segments: [BatteryHistorySegment]
+    ) -> some View {
+        Chart {
+            ForEach(segments) { segment in
+                ForEach(segment.records) { record in
+                    LineMark(
+                        x: .value("Time", record.recordedAt),
+                        y: .value("Charge", record.percentage),
+                        series: .value("Continuous samples", segment.id)
+                    )
+                    .foregroundStyle(.tint)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                }
+            }
+            if records.count == 1, let record = records.first {
+                PointMark(
+                    x: .value("Time", record.recordedAt),
+                    y: .value("Charge", record.percentage)
+                )
+                .foregroundStyle(.tint)
+                .symbolSize(42)
+            }
+            if let selectedHistoryRecord {
+                RuleMark(x: .value("Selected time", selectedHistoryRecord.recordedAt))
+                    .foregroundStyle(.secondary)
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                PointMark(
+                    x: .value("Selected time", selectedHistoryRecord.recordedAt),
+                    y: .value("Selected charge", selectedHistoryRecord.percentage)
+                )
+                .foregroundStyle(.tint)
+                .symbolSize(58)
+            }
+        }
+        .chartYScale(domain: 0...100)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: [0, 50, 100]) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let percentage = value.as(Int.self) {
+                        Text("\(percentage)%")
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 3))
+        }
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case let .active(location):
+                            guard let plotAnchor = proxy.plotFrame else {
+                                selectedHistoryRecord = nil
+                                return
+                            }
+                            let plotFrame = geometry[plotAnchor]
+                            guard plotFrame.contains(location),
+                                  let date = proxy.value(
+                                      atX: location.x - plotFrame.origin.x,
+                                      as: Date.self
+                                  )
+                            else {
+                                selectedHistoryRecord = nil
+                                return
+                            }
+                            let record = nearestHistoryRecord(to: date, in: records)
+                            if selectedHistoryRecord?.id != record?.id {
+                                selectedHistoryRecord = record
+                            }
+                        case .ended:
+                            selectedHistoryRecord = nil
+                        }
+                    }
+            }
+        }
+        .frame(height: 156)
+        .accessibilityLabel("Battery charge history")
+        .accessibilityHint("Hover a saved sample to show its time and charge.")
+    }
+
+    private func menuBarHistoryCaption(records: [BatteryHistoryRecord]) -> some View {
+        HStack {
+            if let selectedHistoryRecord {
+                Text(selectedHistoryRecord.recordedAt.formatted(date: .abbreviated, time: .shortened))
+                    .foregroundStyle(.secondary)
+                Text("\(selectedHistoryRecord.percentage)%")
+                    .fontWeight(.semibold)
+            } else {
+                Text("Latest \(records.last?.percentage ?? 0)%")
+            }
+            Spacer()
+            Text("\(records.count) samples")
+                .foregroundStyle(.secondary)
+        }
+        .font(.caption)
+        .monospacedDigit()
+    }
+
+    private func nearestHistoryRecord(
+        to date: Date,
+        in records: [BatteryHistoryRecord]
+    ) -> BatteryHistoryRecord? {
+        guard !records.isEmpty else { return nil }
+
+        var lowerBound = records.startIndex
+        var upperBound = records.endIndex
+        while lowerBound < upperBound {
+            let middle = (lowerBound + upperBound) / 2
+            if records[middle].recordedAt < date {
+                lowerBound = middle + 1
+            } else {
+                upperBound = middle
+            }
+        }
+
+        let firstLaterIndex = lowerBound
+        let later = firstLaterIndex < records.endIndex ? records[firstLaterIndex] : nil
+        let earlier = firstLaterIndex > records.startIndex ? records[firstLaterIndex - 1] : nil
+        switch (earlier, later) {
+        case let (earlier?, later?):
+            return date.timeIntervalSince(earlier.recordedAt) <= later.recordedAt.timeIntervalSince(date)
+                ? earlier
+                : later
+        case let (earlier?, nil): return earlier
+        case let (nil, later?): return later
+        case (nil, nil): return nil
         }
     }
 

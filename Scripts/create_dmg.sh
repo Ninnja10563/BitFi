@@ -41,7 +41,8 @@ fi
 ditto "$APP_PATH" "$MOUNT_POINT/BitFi.app"
 ln -s /Applications "$MOUNT_POINT/Applications"
 mkdir -p "$MOUNT_POINT/.background"
-sips -z 600 380 "$BACKGROUND_PATH" --out "$MOUNT_POINT/.background/BitFi-DMG-background.png" >/dev/null
+# sips expects height then width. Finder window interior is 600 × 380 points.
+sips -z 380 600 "$BACKGROUND_PATH" --out "$MOUNT_POINT/.background/BitFi-DMG-background.png" >/dev/null
 SetFile -a V "$MOUNT_POINT/.background"
 
 osascript <<'APPLESCRIPT'
