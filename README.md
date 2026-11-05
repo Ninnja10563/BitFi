@@ -17,6 +17,7 @@ Native macOS battery monitor with charge-threshold reminders. Built with Swift, 
 - Live battery percentage, charge state, power source, time estimates, health, condition, temperature, voltage, current, cycle count when macOS reports each field.
 - Battery health condition plus maximum-capacity percentage when macOS publishes design capacity.
 - Automatic IOKit power-source updates, wake refresh, menu bar extra with correctly level-matched battery glyph and live percentage.
+- Closing last BitFi or Settings window hides Dock presence; menu-bar monitoring continues. Opening BitFi restores Dock presence with its window.
 - Persistent 50–100% custom threshold; 70%, 80%, 85%, 90% presets.
 - Real local notification at threshold. `Charge to 100% This Session` pauses reminder until power disconnects.
 - Login-at-login via `SMAppService.mainApp`.
@@ -63,7 +64,7 @@ BitFi/
 Release DMG build:
 
 ```sh
-Scripts/build_release_dmg.sh 1.2.6
+Scripts/build_release_dmg.sh 1.2.7
 ```
 
-Creates `Artifacts/BitFi-1.2.6-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, flat black BitFi battery icon at 75% charge with menu-bar-matched corners, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.
+Creates `Artifacts/BitFi-1.2.7-universal.dmg`: Apple-silicon + Intel executable, branded Finder artwork, flat black BitFi battery icon at 75% charge with menu-bar-matched corners, Applications shortcut. Build is ad-hoc signed; release builds need Developer ID signing and notarization before broad distribution.

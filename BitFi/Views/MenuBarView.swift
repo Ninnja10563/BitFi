@@ -55,8 +55,10 @@ struct MenuBarView: View {
 
             HStack {
                 Button("Open BitFi") {
+                    DockIconVisibility.showForWindow()
                     openWindow(id: "main")
                     NSApp.activate(ignoringOtherApps: true)
+                    DockIconVisibility.synchronizeOnNextRunLoop()
                 }
                 Spacer()
                 SettingsLink {

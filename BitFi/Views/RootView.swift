@@ -53,6 +53,9 @@ struct RootView: View {
             selectedView
         }
         .navigationSplitViewStyle(.balanced)
+        .onAppear {
+            DockIconVisibility.showForWindow()
+        }
         .task {
             monitor.start()
             reminder.start(monitor: monitor, settings: settings)

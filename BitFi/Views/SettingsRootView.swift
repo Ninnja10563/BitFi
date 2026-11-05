@@ -20,6 +20,9 @@ struct SettingsRootView: View {
         }
         .frame(width: 590, height: 410)
         .onAppear {
+            DockIconVisibility.showForWindow()
+        }
+        .onAppear {
             loginItem.refresh()
             notifications.refreshAuthorization()
         }
