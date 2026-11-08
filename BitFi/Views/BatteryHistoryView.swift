@@ -7,6 +7,12 @@ struct BatteryHistoryView: View {
     @State private var scrollPosition = Date.now.addingTimeInterval(-24 * 60 * 60)
     @State private var selectedRecord: BatteryHistoryRecord?
     @State private var timelineEnd = Date.now
+    @State private var zoomFactor = 1.0
+    @State private var magnificationStartZoom: Double?
+    @State private var magnificationFocalDate: Date?
+
+    private let minimumVisibleDuration: TimeInterval = 15 * 60
+    private let maximumZoomFactor = 1_024.0
 
     private var chartStart: Date {
         let earliestSample = history.earliestRecordedAt ?? chartEnd.addingTimeInterval(-fallbackDuration)
@@ -28,8 +34,24 @@ struct BatteryHistoryView: View {
         selectedRange.visibleDuration ?? 24 * 60 * 60
     }
 
-    private var visibleDuration: TimeInterval {
+    private var baseVisibleDuration: TimeInterval {
         selectedRange.visibleDuration ?? max(chartEnd.timeIntervalSince(chartStart), 60 * 60)
+    }
+
+    private var visibleDuration: TimeInterval {
+        max(minimumVisibleDuration, baseVisibleDuration / zoomFactor)
+    }
+
+    private var maximumAllowedZoomFactor: Double {
+        min(maximumZoomFactor, max(1, baseVisibleDuration / minimumVisibleDuration))
+    }
+
+    private var canZoomIn: Bool {
+        zoomFactor < maximumAllowedZoomFactor - 0.001
+    }
+
+    private var canZoomOut: Bool {
+        zoomFactor > 1.001
     }
 
     private var maximumScrollStart: Date {
@@ -57,7 +79,7 @@ struct BatteryHistoryView: View {
     }
 
     private var canMoveBack: Bool {
-        selectedRange != .all && visibleStart > chartStart.addingTimeInterval(1)
+        visibleStart > chartStart.addingTimeInterval(1)
     }
 
     private var canMoveForward: Bool {
@@ -71,7 +93,7 @@ struct BatteryHistoryView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Battery History")
                             .font(.title2.weight(.semibold))
-                        Text("Saved local charge samples. Pan, navigate, or hover to inspect.")
+                        Text("Saved local charge samples. Pan, zoom, navigate, or hover to inspect.")
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -126,6 +148,7 @@ struct BatteryHistoryView: View {
         }
         .onChange(of: selectedRange) { _, _ in
             selectedRecord = nil
+            zoomFactor = 1
             scrollToLatest()
         }
         .onChange(of: scrollPosition) { _, _ in
@@ -148,6 +171,31 @@ struct BatteryHistoryView: View {
                 .monospacedDigit()
 
             Spacer()
+
+            HStack(spacing: 2) {
+                Button {
+                    changeZoom(by: 0.5)
+                } label: {
+                    Image(systemName: "minus.magnifyingglass")
+                }
+                .help("Zoom out history")
+                .accessibilityLabel("Zoom out history")
+                .disabled(!canZoomOut)
+
+                Button {
+                    changeZoom(by: 2)
+                } label: {
+                    Image(systemName: "plus.magnifyingglass")
+                }
+                .help("Zoom in history")
+                .accessibilityLabel("Zoom in history")
+                .disabled(!canZoomIn)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+
+            Divider()
+                .frame(height: 16)
 
             Button {
                 moveWindow(by: -1)
@@ -234,6 +282,23 @@ struct BatteryHistoryView: View {
                     }
             }
         }
+        .simultaneousGesture(
+            MagnifyGesture()
+                .onChanged { value in
+                    if magnificationStartZoom == nil {
+                        magnificationStartZoom = zoomFactor
+                        magnificationFocalDate = visibleStart.addingTimeInterval(visibleDuration / 2)
+                    }
+                    changeZoom(
+                        to: (magnificationStartZoom ?? zoomFactor) * Double(value.magnification),
+                        focalDate: magnificationFocalDate
+                    )
+                }
+                .onEnded { _ in
+                    magnificationStartZoom = nil
+                    magnificationFocalDate = nil
+                }
+        )
         .frame(height: 290)
         .overlay {
             if visibleWindow.isEmpty {
@@ -245,7 +310,7 @@ struct BatteryHistoryView: View {
             }
         }
         .accessibilityLabel("Scrollable battery charge history")
-        .accessibilityHint("Hover a saved sample to show its time and charge.")
+        .accessibilityHint("Use zoom controls or pinch to change visible time span. Hover a saved sample to show its time and charge.")
     }
 
     @ChartContentBuilder
@@ -322,6 +387,25 @@ struct BatteryHistoryView: View {
     private func scrollToLatest() {
         let start = chartEnd.addingTimeInterval(-visibleDuration)
         scrollPosition = min(max(start, chartStart), maximumScrollStart)
+    }
+
+    private func changeZoom(by multiplier: Double) {
+        changeZoom(to: zoomFactor * multiplier)
+    }
+
+    private func changeZoom(to requestedZoom: Double, focalDate: Date? = nil) {
+        let oldDuration = visibleDuration
+        let newZoom = min(max(requestedZoom, 1), maximumAllowedZoomFactor)
+        guard abs(newZoom - zoomFactor) > 0.001 else { return }
+
+        let focalDate = focalDate ?? visibleStart.addingTimeInterval(oldDuration / 2)
+        let newDuration = max(minimumVisibleDuration, baseVisibleDuration / newZoom)
+        let maximumStart = max(chartStart, chartEnd.addingTimeInterval(-newDuration))
+        let newStart = focalDate.addingTimeInterval(-newDuration / 2)
+
+        selectedRecord = nil
+        zoomFactor = newZoom
+        scrollPosition = min(max(newStart, chartStart), maximumStart)
     }
 
     private func moveWindow(by direction: Int) {
