@@ -5,13 +5,12 @@ struct BatteryLevelSymbol: View {
     let snapshot: BatterySnapshot
     var tint: Color = .primary
     var width: CGFloat = 24
-    var height: CGFloat = 14
+    var height: CGFloat = 12
 
     var body: some View {
         Canvas { context, size in
-            // Slightly lighter than the system battery symbol at this compact size.
-            let lineWidth = max(1, min(size.width, size.height) * 0.075)
-            let terminalWidth = max(2, size.width * 0.075)
+            let lineWidth = max(1, min(size.width, size.height) * 0.1)
+            let terminalWidth = max(2, size.width * 0.1)
             let bodyRect = CGRect(
                 x: lineWidth / 2,
                 y: lineWidth / 2,
@@ -23,10 +22,10 @@ struct BatteryLevelSymbol: View {
             context.stroke(bodyPath, with: .color(tint), lineWidth: lineWidth)
 
             let terminalRect = CGRect(
-                x: bodyRect.maxX + lineWidth * 0.5,
-                y: bodyRect.midY - bodyRect.height * 0.16,
+                x: bodyRect.maxX + lineWidth * 0.45,
+                y: bodyRect.midY - bodyRect.height * 0.18,
                 width: terminalWidth,
-                height: bodyRect.height * 0.32
+                height: bodyRect.height * 0.36
             )
             context.fill(Path(roundedRect: terminalRect, cornerRadius: 1), with: .color(tint))
 
@@ -60,7 +59,7 @@ struct BatteryHeader: View {
                 snapshot: snapshot,
                 tint: snapshot.isCharging ? .accentColor : .secondary,
                 width: 38,
-                height: 22
+                height: 18
             )
                 .frame(width: 38, height: 38)
 
@@ -68,7 +67,7 @@ struct BatteryHeader: View {
                 Text("Battery")
                     .font(.title2.weight(.semibold))
                 HStack(spacing: 6) {
-                    BatteryLevelSymbol(snapshot: snapshot, tint: .secondary, width: 20, height: 12)
+                    BatteryLevelSymbol(snapshot: snapshot, tint: .secondary, width: 20, height: 10)
                     Text(snapshot.statusTitle)
                 }
                     .font(.subheadline)

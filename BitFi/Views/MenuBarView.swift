@@ -108,7 +108,7 @@ struct MenuBarView: View {
                         snapshot: monitor.snapshot,
                         tint: .accentColor,
                         width: 25,
-                        height: 15
+                        height: 12
                     )
                     Text("Battery")
                         .font(.headline)
