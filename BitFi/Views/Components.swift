@@ -9,8 +9,9 @@ struct BatteryLevelSymbol: View {
 
     var body: some View {
         Canvas { context, size in
-            let lineWidth = max(1, min(size.width, size.height) * 0.1)
-            let terminalWidth = max(2, size.width * 0.1)
+            // Slightly lighter than the system battery symbol at this compact size.
+            let lineWidth = max(1, min(size.width, size.height) * 0.075)
+            let terminalWidth = max(2, size.width * 0.075)
             let bodyRect = CGRect(
                 x: lineWidth / 2,
                 y: lineWidth / 2,
@@ -22,10 +23,10 @@ struct BatteryLevelSymbol: View {
             context.stroke(bodyPath, with: .color(tint), lineWidth: lineWidth)
 
             let terminalRect = CGRect(
-                x: bodyRect.maxX + lineWidth * 0.45,
-                y: bodyRect.midY - bodyRect.height * 0.18,
+                x: bodyRect.maxX + lineWidth * 0.5,
+                y: bodyRect.midY - bodyRect.height * 0.16,
                 width: terminalWidth,
-                height: bodyRect.height * 0.36
+                height: bodyRect.height * 0.32
             )
             context.fill(Path(roundedRect: terminalRect, cornerRadius: 1), with: .color(tint))
 
