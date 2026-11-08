@@ -29,13 +29,65 @@ struct MenuBarView: View {
     @State private var selectedPanel: MenuBarPanel = .status
     @State private var selectedAppMode: AppActivityChartMode = .cpu
     @State private var selectedHistoryRecord: BatteryHistoryRecord?
+    @State private var menuHistoryTimelineEnd = Date.now
+    @State private var menuHistoryScrollPosition = Date.now.addingTimeInterval(-24 * 60 * 60)
+    @State private var menuHistoryZoomFactor = 1.0
+    @State private var menuHistoryMagnificationStartZoom: Double?
+    @State private var menuHistoryMagnificationFocalDate: Date?
     @State private var systemAppMessage: String?
+
+    private let menuHistoryBaseDuration: TimeInterval = 24 * 60 * 60
+    private let menuHistoryMinimumVisibleDuration: TimeInterval = 15 * 60
 
     private var chargeLimitBinding: Binding<Double> {
         Binding(
             get: { settings.chargeLimit },
             set: { settings.setChargeLimit($0) }
         )
+    }
+
+    private var menuHistoryChartStart: Date {
+        menuHistoryTimelineEnd.addingTimeInterval(-menuHistoryBaseDuration)
+    }
+
+    private var menuHistoryVisibleDuration: TimeInterval {
+        max(menuHistoryMinimumVisibleDuration, menuHistoryBaseDuration / menuHistoryZoomFactor)
+    }
+
+    private var menuHistoryMaximumZoomFactor: Double {
+        menuHistoryBaseDuration / menuHistoryMinimumVisibleDuration
+    }
+
+    private var menuHistoryCanZoomIn: Bool {
+        menuHistoryZoomFactor < menuHistoryMaximumZoomFactor - 0.001
+    }
+
+    private var menuHistoryCanZoomOut: Bool {
+        menuHistoryZoomFactor > 1.001
+    }
+
+    private var menuHistoryMaximumScrollStart: Date {
+        max(menuHistoryChartStart, menuHistoryTimelineEnd.addingTimeInterval(-menuHistoryVisibleDuration))
+    }
+
+    private var menuHistoryVisibleStart: Date {
+        min(max(menuHistoryScrollPosition, menuHistoryChartStart), menuHistoryMaximumScrollStart)
+    }
+
+    private var menuHistoryVisibleEnd: Date {
+        min(menuHistoryTimelineEnd, menuHistoryVisibleStart.addingTimeInterval(menuHistoryVisibleDuration))
+    }
+
+    private var menuHistoryCanMoveForward: Bool {
+        menuHistoryVisibleEnd < menuHistoryTimelineEnd.addingTimeInterval(-1)
+    }
+
+    private var menuHistoryDurationText: String {
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .abbreviated
+        formatter.allowedUnits = menuHistoryVisibleDuration >= 60 * 60 ? [.hour, .minute] : [.minute]
+        formatter.maximumUnitCount = 2
+        return formatter.string(from: menuHistoryVisibleDuration) ?? "History"
     }
 
     var body: some View {
@@ -73,6 +125,7 @@ struct MenuBarView: View {
             monitor.start()
             history.start(monitor: monitor)
             activityMonitor.start()
+            refreshMenuHistoryTimeline()
         }
         .onDisappear {
             activityMonitor.setLiveSampling(false, for: .menuBar)
@@ -80,11 +133,20 @@ struct MenuBarView: View {
         .onChange(of: selectedPanel) { _, panel in
             if panel != .history {
                 selectedHistoryRecord = nil
+            } else {
+                refreshMenuHistoryTimeline()
             }
             updateMenuBarLiveSampling()
             if panel == .apps, selectedAppMode.measure != nil {
                 activityMonitor.refresh()
             }
+        }
+        .onChange(of: history.latestRecordedAt) { _, _ in
+            guard selectedPanel == .history else { return }
+            refreshMenuHistoryTimeline()
+        }
+        .onChange(of: menuHistoryScrollPosition) { _, _ in
+            selectedHistoryRecord = nil
         }
     }
 
@@ -174,8 +236,8 @@ struct MenuBarView: View {
     }
 
     private var historyPanel: some View {
-        let endDate = Date.now
-        let startDate = endDate.addingTimeInterval(-24 * 60 * 60)
+        let endDate = menuHistoryTimelineEnd
+        let startDate = menuHistoryChartStart
         let records = history.records(from: startDate, through: endDate)
         let segments = history.segments(from: startDate, through: endDate)
 
@@ -184,7 +246,27 @@ struct MenuBarView: View {
                 Label("Battery History", systemImage: "chart.xyaxis.line")
                     .font(.headline)
                 Spacer()
-                Text("24 hours")
+                HStack(spacing: 2) {
+                    Button {
+                        changeMenuHistoryZoom(by: 0.5)
+                    } label: {
+                        Image(systemName: "minus.magnifyingglass")
+                    }
+                    .help("Zoom out history")
+                    .accessibilityLabel("Zoom out menu bar history")
+                    .disabled(!menuHistoryCanZoomOut)
+
+                    Button {
+                        changeMenuHistoryZoom(by: 2)
+                    } label: {
+                        Image(systemName: "plus.magnifyingglass")
+                    }
+                    .help("Zoom in history")
+                    .accessibilityLabel("Zoom in menu bar history")
+                    .disabled(!menuHistoryCanZoomIn)
+                }
+                .buttonStyle(.borderless)
+                Text(menuHistoryDurationText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -245,6 +327,10 @@ struct MenuBarView: View {
             }
         }
         .chartYScale(domain: 0...100)
+        .chartXScale(domain: menuHistoryChartStart...menuHistoryTimelineEnd)
+        .chartScrollableAxes(.horizontal)
+        .chartXVisibleDomain(length: menuHistoryVisibleDuration)
+        .chartScrollPosition(x: $menuHistoryScrollPosition)
         .chartYAxis {
             AxisMarks(position: .leading, values: [0, 50, 100]) { value in
                 AxisGridLine()
@@ -280,7 +366,11 @@ struct MenuBarView: View {
                                 selectedHistoryRecord = nil
                                 return
                             }
-                            let record = nearestHistoryRecord(to: date, in: records)
+                            let record = history.nearestRecord(
+                                to: date,
+                                from: menuHistoryVisibleStart,
+                                through: menuHistoryVisibleEnd
+                            )
                             if selectedHistoryRecord?.id != record?.id {
                                 selectedHistoryRecord = record
                             }
@@ -290,13 +380,37 @@ struct MenuBarView: View {
                     }
             }
         }
+        .simultaneousGesture(
+            MagnifyGesture()
+                .onChanged { value in
+                    if menuHistoryMagnificationStartZoom == nil {
+                        menuHistoryMagnificationStartZoom = menuHistoryZoomFactor
+                        menuHistoryMagnificationFocalDate = menuHistoryVisibleStart
+                            .addingTimeInterval(menuHistoryVisibleDuration / 2)
+                    }
+                    changeMenuHistoryZoom(
+                        to: (menuHistoryMagnificationStartZoom ?? menuHistoryZoomFactor)
+                            * Double(value.magnification),
+                        focalDate: menuHistoryMagnificationFocalDate
+                    )
+                }
+                .onEnded { _ in
+                    menuHistoryMagnificationStartZoom = nil
+                    menuHistoryMagnificationFocalDate = nil
+                }
+        )
         .frame(height: 156)
         .accessibilityLabel("Battery charge history")
-        .accessibilityHint("Hover a saved sample to show its time and charge.")
+        .accessibilityHint("Use zoom controls or pinch to change visible time span. Hover a saved sample to show its time and charge.")
     }
 
     private func menuBarHistoryCaption(records: [BatteryHistoryRecord]) -> some View {
-        HStack {
+        let visibleSampleCount = history.window(
+            from: menuHistoryVisibleStart,
+            through: menuHistoryVisibleEnd
+        ).count
+
+        return HStack {
             if let selectedHistoryRecord {
                 Text(selectedHistoryRecord.recordedAt.formatted(date: .abbreviated, time: .shortened))
                     .foregroundStyle(.secondary)
@@ -306,42 +420,43 @@ struct MenuBarView: View {
                 Text("Latest \(records.last?.percentage ?? 0)%")
             }
             Spacer()
-            Text("\(records.count) samples")
+            Text("\(visibleSampleCount) samples")
                 .foregroundStyle(.secondary)
         }
         .font(.caption)
         .monospacedDigit()
     }
 
-    private func nearestHistoryRecord(
-        to date: Date,
-        in records: [BatteryHistoryRecord]
-    ) -> BatteryHistoryRecord? {
-        guard !records.isEmpty else { return nil }
-
-        var lowerBound = records.startIndex
-        var upperBound = records.endIndex
-        while lowerBound < upperBound {
-            let middle = (lowerBound + upperBound) / 2
-            if records[middle].recordedAt < date {
-                lowerBound = middle + 1
-            } else {
-                upperBound = middle
-            }
+    private func refreshMenuHistoryTimeline() {
+        let wasAtLatest = !menuHistoryCanMoveForward
+        menuHistoryTimelineEnd = .now
+        if wasAtLatest {
+            scrollMenuHistoryToLatest()
         }
+    }
 
-        let firstLaterIndex = lowerBound
-        let later = firstLaterIndex < records.endIndex ? records[firstLaterIndex] : nil
-        let earlier = firstLaterIndex > records.startIndex ? records[firstLaterIndex - 1] : nil
-        switch (earlier, later) {
-        case let (earlier?, later?):
-            return date.timeIntervalSince(earlier.recordedAt) <= later.recordedAt.timeIntervalSince(date)
-                ? earlier
-                : later
-        case let (earlier?, nil): return earlier
-        case let (nil, later?): return later
-        case (nil, nil): return nil
-        }
+    private func scrollMenuHistoryToLatest() {
+        let start = menuHistoryTimelineEnd.addingTimeInterval(-menuHistoryVisibleDuration)
+        menuHistoryScrollPosition = min(max(start, menuHistoryChartStart), menuHistoryMaximumScrollStart)
+    }
+
+    private func changeMenuHistoryZoom(by multiplier: Double) {
+        changeMenuHistoryZoom(to: menuHistoryZoomFactor * multiplier)
+    }
+
+    private func changeMenuHistoryZoom(to requestedZoom: Double, focalDate: Date? = nil) {
+        let oldDuration = menuHistoryVisibleDuration
+        let newZoom = min(max(requestedZoom, 1), menuHistoryMaximumZoomFactor)
+        guard abs(newZoom - menuHistoryZoomFactor) > 0.001 else { return }
+
+        let focalDate = focalDate ?? menuHistoryVisibleStart.addingTimeInterval(oldDuration / 2)
+        let newDuration = max(menuHistoryMinimumVisibleDuration, menuHistoryBaseDuration / newZoom)
+        let maximumStart = max(menuHistoryChartStart, menuHistoryTimelineEnd.addingTimeInterval(-newDuration))
+        let newStart = focalDate.addingTimeInterval(-newDuration / 2)
+
+        selectedHistoryRecord = nil
+        menuHistoryZoomFactor = newZoom
+        menuHistoryScrollPosition = min(max(newStart, menuHistoryChartStart), maximumStart)
     }
 
     private var appsPanel: some View {
